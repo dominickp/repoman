@@ -46,3 +46,6 @@ jobs:
 
       - name: Build
         run: go build -trimpath ./cmd/repoman
+
+      - name: Vulnerability check
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
