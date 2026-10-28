@@ -1,8 +1,8 @@
 package tui
 
 import (
-	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -60,9 +60,10 @@ func (s *settingsState) rebuild() {
 	for i, d := range s.cfg.Dirs {
 		s.rows = append(s.rows, settingsRow{kind: rowDir, label: shortPath(d), index: i})
 	}
-	s.rows = append(s.rows, settingsRow{kind: rowAddDir, label: "add directory…"})
-
-	s.rows = append(s.rows, settingsRow{kind: rowSection, label: "EXCLUDED REPOSITORIES"})
+	s.rows = append(s.rows,
+		settingsRow{kind: rowAddDir, label: "add directory…"},
+		settingsRow{kind: rowSection, label: "EXCLUDED REPOSITORIES"},
+	)
 	if len(s.cfg.Ignored) == 0 {
 		s.rows = append(s.rows, settingsRow{kind: rowInfo, label: "none — press i on a repository to exclude it"})
 	}
@@ -74,19 +75,21 @@ func (s *settingsState) rebuild() {
 		})
 	}
 
-	s.rows = append(s.rows, settingsRow{kind: rowSection, label: "APPEARANCE & BEHAVIOUR"})
-	s.rows = append(s.rows, settingsRow{kind: rowView, label: "Default view", value: string(s.cfg.View)})
-	s.rows = append(s.rows, settingsRow{kind: rowTheme, label: "Theme", value: s.cfg.Theme.Preset})
-	s.rows = append(s.rows, settingsRow{
-		kind:  rowPrune,
-		label: "Prune deleted remote branches on fetch",
-		value: onOff(s.cfg.PruneOnFetch),
-	})
-	s.rows = append(s.rows, settingsRow{
-		kind:  rowDepth,
-		label: "Max scan depth",
-		value: fmt.Sprintf("%d", s.cfg.MaxDepth),
-	})
+	s.rows = append(s.rows,
+		settingsRow{kind: rowSection, label: "APPEARANCE & BEHAVIOUR"},
+		settingsRow{kind: rowView, label: "Default view", value: string(s.cfg.View)},
+		settingsRow{kind: rowTheme, label: "Theme", value: s.cfg.Theme.Preset},
+		settingsRow{
+			kind:  rowPrune,
+			label: "Prune deleted remote branches on fetch",
+			value: onOff(s.cfg.PruneOnFetch),
+		},
+		settingsRow{
+			kind:  rowDepth,
+			label: "Max scan depth",
+			value: strconv.Itoa(s.cfg.MaxDepth),
+		},
+	)
 
 	s.cursor = clamp(current, 0, max(0, len(s.rows)-1))
 	s.skipSections(1)
@@ -94,7 +97,7 @@ func (s *settingsState) rebuild() {
 
 // skipSections moves the cursor off non-selectable rows.
 func (s *settingsState) skipSections(dir int) {
-	for i := 0; i < len(s.rows); i++ {
+	for range s.rows {
 		if s.cursor < 0 || s.cursor >= len(s.rows) {
 			return
 		}
@@ -107,7 +110,7 @@ func (s *settingsState) skipSections(dir int) {
 }
 
 func (s *settingsState) move(dir int) {
-	for i := 0; i < len(s.rows); i++ {
+	for range s.rows {
 		s.cursor += dir
 		if s.cursor < 0 {
 			s.cursor = len(s.rows) - 1
@@ -309,8 +312,7 @@ func (m *Model) settingsView(height int) string {
 		lines = append(lines, "", m.st.key.Render("new directory: ")+s.input.View())
 	}
 
-	lines = append(lines, "")
-	lines = append(lines, m.st.muted.Render("enter/space change · a add directory · d remove · backspace close & save"))
+	lines = append(lines, "", m.st.muted.Render("enter/space change · a add directory · d remove · backspace close & save"))
 	if m.cfgPath != "" {
 		lines = append(lines, m.st.badge.Render(shortPath(m.cfgPath)))
 	}

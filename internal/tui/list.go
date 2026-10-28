@@ -247,7 +247,7 @@ func (m *Model) gridView(height int) string {
 	}
 
 	var lines []string
-	for r := 0; r < rowsVisible; r++ {
+	for r := range rowsVisible {
 		start := (m.offset + r) * cols
 		if start >= len(vis) {
 			break

@@ -110,7 +110,7 @@ func TestGridColumnsFitTerminal(t *testing.T) {
 func TestSortModes(t *testing.T) {
 	m := testModel(100, 25)
 	m.cfg.View = config.ViewGrid
-	for i := 0; i < len(sortModeNames); i++ {
+	for range sortModeNames {
 		m.cycleSort()
 	}
 	if m.sortMode != sortName {

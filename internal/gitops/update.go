@@ -61,7 +61,7 @@ func (r UpdateResult) Message() string {
 	case OutcomeSwitched:
 		return fmt.Sprintf("%s: branch merged remotely, switched to %s", r.Name, r.Branch)
 	case OutcomeUpToDate:
-		return fmt.Sprintf("%s: already up to date", r.Name)
+		return r.Name + ": already up to date"
 	case OutcomeSkipped:
 		return fmt.Sprintf("%s: skipped (%s)", r.Name, r.Reason)
 	case OutcomeFailed:

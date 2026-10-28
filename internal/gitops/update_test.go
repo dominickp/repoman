@@ -320,7 +320,7 @@ func TestDiscoverHonoursDepth(t *testing.T) {
 }
 
 func trim(s string) string {
-	for len(s) > 0 && (s[len(s)-1] == '\n' || s[len(s)-1] == '\r' || s[len(s)-1] == ' ') {
+	for s != "" && (s[len(s)-1] == '\n' || s[len(s)-1] == '\r' || s[len(s)-1] == ' ') {
 		s = s[:len(s)-1]
 	}
 	return s

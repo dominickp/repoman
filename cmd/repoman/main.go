@@ -70,7 +70,8 @@ func main() {
 	}
 
 	if *listOnly {
-		os.Exit(printTable(cfg))
+		printTable(cfg)
+		return
 	}
 
 	if err := tui.Run(cfg, path); err != nil {
@@ -81,14 +82,14 @@ func main() {
 
 // printTable writes a plain-text overview, useful for scripting and for
 // verifying behaviour without a TTY.
-func printTable(cfg *config.Config) int {
+func printTable(cfg *config.Config) {
 	paths, errs := gitops.Discover(cfg.Dirs, cfg.MaxDepth)
 	for _, e := range errs {
 		fmt.Fprintln(os.Stderr, "warning:", e)
 	}
 	if len(paths) == 0 {
 		fmt.Println("no repositories found; add a directory with -add-dir")
-		return 0
+		return
 	}
 
 	snaps := gitops.MapInspect(context.Background(), paths, 8)
@@ -123,7 +124,6 @@ func printTable(cfg *config.Config) int {
 			strings.Join(state, ", "),
 		)
 	}
-	return 0
 }
 
 func truncatePlain(s string, w int) string {

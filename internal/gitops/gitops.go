@@ -71,23 +71,28 @@ func run(ctx context.Context, dir string, args ...string) (string, error) {
 	err := cmd.Run()
 	out := strings.TrimSpace(stdout.String())
 	if err != nil {
-		if ctx.Err() != nil {
-			return out, fmt.Errorf("git %s: timed out", strings.Join(args, " "))
-		}
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			msg := strings.TrimSpace(stderr.String())
-			if msg == "" {
-				msg = out
-			}
-			if msg == "" {
-				msg = err.Error()
-			}
-			return out, fmt.Errorf("%s", firstLine(msg))
-		}
-		return out, err
+		return out, runError(ctx, err, args, out, stderr.String())
 	}
 	return out, nil
+}
+
+// runError turns a failed git invocation into a concise error message.
+func runError(ctx context.Context, err error, args []string, out, stderr string) error {
+	if ctx.Err() != nil {
+		return fmt.Errorf("git %s: timed out", strings.Join(args, " "))
+	}
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		return err
+	}
+	msg := strings.TrimSpace(stderr)
+	if msg == "" {
+		msg = out
+	}
+	if msg == "" {
+		msg = err.Error()
+	}
+	return errors.New(firstLine(msg))
 }
 
 // ok runs git and reports whether it exited successfully.
@@ -204,8 +209,9 @@ func Inspect(ctx context.Context, path string) *Snapshot {
 	if branch == "HEAD" {
 		snap.Detached = true
 		snap.Branch = "(detached)"
-		sha, _ := run(ctx, path, "rev-parse", "--short", "HEAD")
-		snap.SHA = sha
+		if sha, err := run(ctx, path, "rev-parse", "--short", "HEAD"); err == nil {
+			snap.SHA = sha
+		}
 	} else {
 		snap.Branch = branch
 	}
@@ -217,25 +223,7 @@ func Inspect(ctx context.Context, path string) *Snapshot {
 	}
 
 	if !snap.Detached {
-		if up, err := run(ctx, path, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"); err == nil && up != "" && up != "@{u}" {
-			snap.Upstream = up
-			snap.HasUpstream = true
-			if counts, err := run(ctx, path, "rev-list", "--left-right", "--count", "@{u}...HEAD"); err == nil {
-				fields := strings.Fields(counts)
-				if len(fields) == 2 {
-					snap.Behind, _ = strconv.Atoi(fields[0])
-					snap.Ahead, _ = strconv.Atoi(fields[1])
-				}
-			}
-		} else if remote := snap.Remote; remote != "" {
-			// A configured upstream whose remote ref disappeared shows up as
-			// "[gone]" in the branch's tracking info.
-			track, err := run(ctx, path, "for-each-ref", "--format=%(upstream:track)", "refs/heads/"+snap.Branch)
-			if err == nil && strings.Contains(track, "gone") {
-				snap.UpstreamGone = true
-				snap.Upstream = remote + "/" + snap.Branch
-			}
-		}
+		inspectUpstream(ctx, path, snap)
 	}
 
 	if status, err := run(ctx, path, "status", "--porcelain"); err == nil {
@@ -260,6 +248,42 @@ func Inspect(ctx context.Context, path string) *Snapshot {
 	}
 
 	return snap
+}
+
+// inspectUpstream fills in the upstream tracking details for the snapshot.
+func inspectUpstream(ctx context.Context, path string, snap *Snapshot) {
+	up, err := run(ctx, path, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+	if err == nil && up != "" && up != "@{u}" {
+		snap.Upstream = up
+		snap.HasUpstream = true
+		counts, err := run(ctx, path, "rev-list", "--left-right", "--count", "@{u}...HEAD")
+		if err != nil {
+			return
+		}
+		fields := strings.Fields(counts)
+		if len(fields) != 2 {
+			return
+		}
+		if n, err := strconv.Atoi(fields[0]); err == nil {
+			snap.Behind = n
+		}
+		if n, err := strconv.Atoi(fields[1]); err == nil {
+			snap.Ahead = n
+		}
+		return
+	}
+
+	remote := snap.Remote
+	if remote == "" {
+		return
+	}
+	// A configured upstream whose remote ref disappeared shows up as
+	// "[gone]" in the branch's tracking info.
+	track, err := run(ctx, path, "for-each-ref", "--format=%(upstream:track)", "refs/heads/"+snap.Branch)
+	if err == nil && strings.Contains(track, "gone") {
+		snap.UpstreamGone = true
+		snap.Upstream = remote + "/" + snap.Branch
+	}
 }
 
 // remoteFor returns the remote tracking the given branch, defaulting to origin.
@@ -341,7 +365,7 @@ func FetchMany(ctx context.Context, paths []string, prune bool, workers int) <-c
 		defer close(out)
 		jobs := make(chan string)
 		var wg sync.WaitGroup
-		for i := 0; i < workers; i++ {
+		for range workers {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()

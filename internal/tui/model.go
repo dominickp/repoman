@@ -625,7 +625,7 @@ func (m *Model) openVSCode() tea.Cmd {
 	}
 	path := snap.Path
 	return func() tea.Msg {
-		cmd := exec.Command("code", path)
+		cmd := exec.CommandContext(context.Background(), "code", path)
 		cmd.Stdout = nil
 		cmd.Stderr = nil
 		return openVSCodeMsg{err: cmd.Start()}
@@ -884,11 +884,12 @@ func (m *Model) View() string {
 	case m.help:
 		body = m.helpView(bodyHeight)
 	default:
-		if len(m.repos) == 0 {
+		switch {
+		case len(m.repos) == 0:
 			body = m.emptyView(bodyHeight)
-		} else if m.cfg.View == config.ViewGrid {
+		case m.cfg.View == config.ViewGrid:
 			body = m.gridView(bodyHeight)
-		} else {
+		default:
 			body = m.listView(bodyHeight)
 		}
 	}
@@ -1005,7 +1006,8 @@ func (m *Model) renderHints(hints [][2]string) string {
 		if i > 0 {
 			b.WriteString(m.st.badge.Render("  "))
 		}
-		b.WriteString(m.st.key.Render(h[0]) + m.st.hint.Render(" "+h[1]))
+		b.WriteString(m.st.key.Render(h[0]))
+		b.WriteString(m.st.hint.Render(" " + h[1]))
 	}
 	return b.String()
 }
@@ -1063,10 +1065,12 @@ func (m *Model) helpView(height int) string {
 	for _, b := range bindings {
 		lines = append(lines, m.st.key.Render(fmt.Sprintf("%-10s", b[0]))+m.st.text.Render(b[1]))
 	}
-	lines = append(lines, "", m.st.muted.Render("Safe updates only fast-forward: dirty, detached, diverged or"))
-	lines = append(lines, m.st.muted.Render("ahead-of-remote repositories are left untouched."))
-	lines = append(lines, "", m.st.muted.Render("State flags: ●N uncommitted changes, ! error, ⊘ excluded,"))
-	lines = append(lines, m.st.muted.Render("⇡merged branch merged remotely, ✓ clean."))
+	lines = append(lines,
+		"", m.st.muted.Render("Safe updates only fast-forward: dirty, detached, diverged or"),
+		m.st.muted.Render("ahead-of-remote repositories are left untouched."),
+		"", m.st.muted.Render("State flags: ●N uncommitted changes, ! error, ⊘ excluded,"),
+		m.st.muted.Render("⇡merged branch merged remotely, ✓ clean."),
+	)
 
 	// On short terminals only a window of the bindings fits; scroll it so
 	// every line stays reachable.
