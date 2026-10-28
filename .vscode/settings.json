@@ -1,0 +1,11 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "go": true,
+        "./repoman": true,
+        "tmux": true,
+        "awk": true,
+        "gofmt": true,
+        "make": true,
+        "golangci-lint": true
+    }
+}

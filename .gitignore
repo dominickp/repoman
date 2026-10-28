@@ -1,0 +1,4 @@
+/repoman
+/dist/
+*.out
+.DS_Store
