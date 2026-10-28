@@ -1,0 +1,65 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    # High-value bug & correctness checkers not in standard set
+    - errorlint
+    - nilerr
+    - nilnil
+    - bodyclose
+    - contextcheck
+    - noctx
+    - copyloopvar
+    - wastedassign
+    - durationcheck
+    - makezero
+    - usestdlibvars
+    - errname
+    - perfsprint
+    - intrange
+    - exptostd
+    - gosec
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+
+    gosec:
+      excludes:
+        - G204 # dynamic subprocess (expected for CLI tools)
+        - G304 # file path inclusion (expected for config loading)
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+          - unparam
+          - dupl
+          - goconst
+          - noctx
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/dominickp/repoman
