@@ -5,10 +5,21 @@ see what needs attention, and fetch or safely update them in bulk.
 
 ## Install
 
-Requires Go 1.26+ and `git` on `PATH`.
+Requires `git` on `PATH`.
+
+Prebuilt binaries for Linux, macOS and Windows (`amd64`, `arm64`) are attached
+to each [release](https://github.com/dominickp/repoman/releases/latest) as
+`repoman_<tag>_<os>_<arch>.tar.gz` (`.zip` on Windows):
 
 ```sh
-go install github.com/dom/repoman/cmd/repoman@latest
+tar -xzf repoman_v0.1.0_linux_amd64.tar.gz
+install -m 755 repoman_v0.1.0_linux_amd64/repoman ~/.local/bin/repoman
+```
+
+Or build from source, which needs Go 1.26+:
+
+```sh
+go install github.com/dominickp/repoman/cmd/repoman@latest
 ```
 
 Or from a checkout:
@@ -48,3 +59,6 @@ make test    # unit + integration tests (they build throwaway git repos)
 make vet
 make build
 ```
+
+CI runs `gofmt`, `vet`, `golangci-lint`, tests and `govulncheck`. Pushing a
+`v*` tag builds and publishes the release binaries.
